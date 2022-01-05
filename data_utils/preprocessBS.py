@@ -1,12 +1,10 @@
 import os, sys
 import numpy as np
-np.set_printoptions(threshold=np.inf, linewidth=np.inf)
-import torch
-
 import pandas as pd
 
 #import torch
 #import torch.nn.fuctional as F
+
 
 def getAAonehot(seq):
     AA_dict = {
@@ -23,7 +21,10 @@ def getAAonehot(seq):
     assert len(int_seq) == onehot_seq.shape[0]
     return onehot_seq
 
+
+
 def getAminoAcidPathy(AA):
+    # Soy-based adhesives for wood-bonding?
     if AA in ['G', 'P', 'F', 'A', 'I', 'L', 'V']: # hydrophobic
         return [1, 0, 0]
     elif AA in ['S', 'T', 'D', 'E', 'C', 'N', 'Q', 'R', 'H', 'U']: # hydrophilic
@@ -52,57 +53,22 @@ def getStructuralInfo(file_p, pdb, chain):
     return dssp_seq, sasa_seq
 
 
-proj_p = '/home/dongwoo/project/geo/BS_prediction'
-data_p = '/home/dongwoo/project/geo/scPDB_m/clean_set'
-for i in range(9):
-    for idx, seqInfo in enumerate(open(f'{proj_p}/valid_data.set/set{i}_seq.info', 'r').readlines()[1:]):
-            seqInfo=seqInfo
-            file_p=f'{data_p}/set_{i}/{seqInfo.split(",")[0]}'
-            pdb=seqInfo.split(',')[0]
-            chain=seqInfo.split(',')[1]
+def getEdgeCAcontact(file_p, pdb, chain, seq_len):
 
-def GetContactmapInfo(file_p, pdb, chain):
+    edge_idx, edge_weight = [], np.zeros( (seq_len, seq_len) )
+    edge_weight = []
+    for i in open(f'{file_p}/{pdb}{chain}_cnt.dat', 'r').readlines():
+        ca_i, ca_j, dist = int(i.split()[0])-1, int(i.split()[1])-1,  1 / ( 1 + np.log(float(i.split()[2])) )
 
-    map_size = max([int(i.split()[1]) for i in open(f'{file_p}/{pdb}{chain}_cnt.dat', 'r')])
-    map = np.zeros((map_size, map_size))
+        # generate undirected-graph edge index
+        edge_idx.append( [ca_i, ca_j] ); edge_idx.append( [ca_j, ca_i] )
 
-    for j in open(f'{file_p}/{pdb}{chain}_cnt.dat', 'r').readlines():
-        alpha = j.split()[0]
-        beta = j.split()[1]
-        value_attr = j.split()[2]
+        # generate edge weight based on the distance function
+        #ca_contact[ca_i,ca_j], ca_contact[ca_j,ca_i] = dist, dist
+        edge_weight.extend( [dist, dist] )
 
-        #edge_attr
-        edge_attr = map
-        edge_attr[int(alpha) - 1, int(beta) - 1] = value_attr
-        edge_attr[int(beta) - 1, int(alpha) - 1] = value_attr
+    return edge_idx, edge_weight
 
-        #edge_index
-        edge_index = np.where(map > 0, 1, map)
 
-        #edge_weight
-        edge_weight = np.reciprocal(edge_attr)
-        edge_weight = np.nan_to_num(edge_weight, copy=True, posinf=0)
 
-    return edge_attr, edge_index, edge_weight
 
-# def GetContactmapInfo(file_p, pdb, chain):
-#
-#     map_size = max([int(i.split()[1]) for i in open(f'{file_p}/{pdb}{chain}_cnt.dat', 'r')])
-#     map = np.zeros((map_size, map_size))
-#
-#     for j in open(f'{file_p}/{pdb}{chain}_cnt.dat', 'r').readlines():
-#         alpha = j.split()[0]
-#         beta = j.split()[1]
-#         value_attr = j.split()[2]
-#
-#         #edge_attr
-#         edge_attr = map
-#         edge_attr[int(alpha) - 1, int(beta) - 1] = value_attr
-#         edge_attr[int(beta) - 1, int(alpha) - 1] = value_attr
-#
-#         #edge_index
-#         edge_index = np.where(map > 0, 1, map)
-#
-#         #edge_weight
-#         edge_weight = np.reciprocal(edge_attr)
-#         edge_weight = np.nan_to_num(edge_weight, copy=True, posinf=0)
